@@ -22,3 +22,6 @@ testdata/expected/report/*.got.*
 *.out
 
 dist/
+
+# local vendor checkouts
+_vendor/
