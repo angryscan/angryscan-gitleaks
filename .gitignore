@@ -7,7 +7,7 @@
 *.DS_STORE
 *.idea
 *.got
-gitleaks
+/gitleaks
 build
 profile
 

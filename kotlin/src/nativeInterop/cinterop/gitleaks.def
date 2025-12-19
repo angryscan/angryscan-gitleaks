@@ -1,10 +1,8 @@
-headers = ../../../../cgo/cgo.h
 package = org.angryscan.gitleaks.native
 
-# The header path is relative to this .def file.
+# Header path will be specified in Gradle build file via includeDirs
+# to avoid relative path issues on different platforms.
 # Linking options are configured per-target in Gradle because the library filename
 # and location differ by OS/arch.
-
-compilerOpts = -I../../../../cgo
 
 
