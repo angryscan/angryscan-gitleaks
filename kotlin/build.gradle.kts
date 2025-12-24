@@ -1,4 +1,3 @@
-import com.vanniktech.maven.publish.SonatypeHost
 import org.gradle.api.tasks.Copy
 import org.gradle.language.jvm.tasks.ProcessResources
 import java.io.File
@@ -216,12 +215,26 @@ mavenPublishing {
 
     signAllPublications()
 
-    // For SNAPSHOT versions, use DEFAULT host (supports snapshots via OSSRH)
     // For release versions, use Central Portal
-    if (project.version.toString().endsWith("SNAPSHOT")) {
-        publishToMavenCentral(SonatypeHost.DEFAULT)
-    } else {
-        publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    // SNAPSHOT versions will be published via standard publishing block below
+    if (!project.version.toString().endsWith("SNAPSHOT")) {
+        publishToMavenCentral()
+    }
+}
+
+// For SNAPSHOT versions, publish directly to OSSRH (Central Portal doesn't support snapshots)
+if (project.version.toString().endsWith("SNAPSHOT")) {
+    publishing {
+        repositories {
+            maven {
+                name = "sonatype-ossrh-snapshots"
+                url = uri("https://oss.sonatype.org/content/repositories/snapshots/")
+                credentials {
+                    username = project.findProperty("ORG_GRADLE_PROJECT_mavenCentralUsername") as String?
+                    password = project.findProperty("ORG_GRADLE_PROJECT_mavenCentralPassword") as String?
+                }
+            }
+        }
     }
 }
 
