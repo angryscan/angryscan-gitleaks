@@ -200,3 +200,4 @@ ls -lh build/out/darwin-*/libgitleaks.dylib
 ```
 
 
+

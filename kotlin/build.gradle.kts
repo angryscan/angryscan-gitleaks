@@ -1,5 +1,6 @@
 import com.vanniktech.maven.publish.SonatypeHost
 import org.gradle.api.tasks.Copy
+import org.gradle.language.jvm.tasks.ProcessResources
 import java.io.File
 
 plugins {
@@ -133,6 +134,12 @@ val copyNativeLibraries = tasks.register<Copy>("copyNativeLibraries") {
 
 // Make jvmJar depend on copyNativeLibraries to ensure native libraries are included
 tasks.named<org.gradle.jvm.tasks.Jar>("jvmJar") {
+    dependsOn(copyNativeLibraries)
+}
+
+// Gradle validation: jvmProcessResources reads from the same resources dir that copyNativeLibraries writes into.
+// Declare the dependency explicitly to avoid ordering issues.
+tasks.named<ProcessResources>("jvmProcessResources") {
     dependsOn(copyNativeLibraries)
 }
 
