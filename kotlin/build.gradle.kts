@@ -185,7 +185,7 @@ tasks.named<Test>("jvmTest") {
 mavenPublishing {
     coordinates(
         groupId = "org.angryscan",
-        artifactId = "angryscan-gitleaks",
+        artifactId = "gitleaks",
         version = project.version.toString()
     )
 
@@ -214,8 +214,14 @@ mavenPublishing {
         }
     }
 
-    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
-
     signAllPublications()
+
+    // For SNAPSHOT versions, use DEFAULT host (supports snapshots via OSSRH)
+    // For release versions, use Central Portal
+    if (project.version.toString().endsWith("SNAPSHOT")) {
+        publishToMavenCentral(SonatypeHost.DEFAULT)
+    } else {
+        publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    }
 }
 

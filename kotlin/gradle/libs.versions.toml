@@ -3,7 +3,7 @@ kotlin = "2.3.0"
 kotlinx-serialization-json = "1.9.0"
 jna = "5.18.1"
 angryscan-core = "1.4.4"
-mpublish = "0.30.0"
+mpublish = "0.35.0"
 
 [libraries]
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }

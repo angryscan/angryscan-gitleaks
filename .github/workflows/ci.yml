@@ -167,7 +167,7 @@ jobs:
         run: |
           chmod +x gradlew
 
-      - name: Publish SNAPSHOT to Maven Central (Central Portal)
+      - name: Publish SNAPSHOT to Maven Central (OSSRH)
         id: publish
         working-directory: kotlin
         env:
@@ -199,7 +199,7 @@ jobs:
             const prNumber = context.payload.pull_request.number;
             const version = `${{ steps.published.outputs.published_version }}`;
             const groupId = "org.angryscan";
-            const artifactId = "angryscan-gitleaks";
+            const artifactId = "gitleaks";
             const body =
               `✅ SNAPSHOT published.\n\n` +
               `**Published version:** \`${version}\`\n\n` +
