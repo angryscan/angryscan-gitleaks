@@ -33,7 +33,7 @@ jobs:
 
       - name: Run Go tests
         run: |
-          CGO_ENABLED=1 go test -v ./... --race
+          CGO_ENABLED=1 go test -race -v ./...
 
       - name: Build native library (linux-amd64) for Kotlin JVM tests
         run: |
