@@ -1,4 +1,6 @@
 import com.vanniktech.maven.publish.SonatypeHost
+import org.gradle.api.tasks.Copy
+import java.io.File
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -26,12 +28,14 @@ kotlin {
     // macosArm64()
 
     sourceSets {
+        @Suppress("unused")
         val commonMain by getting {
             dependencies {
                 api(libs.angryscan.core)
                 implementation(libs.kotlinx.serialization)
             }
         }
+        @Suppress("unused")
         val jvmMain by getting {
             dependencies {
                 // JNA is used to load libgitleaks shared library at runtime
@@ -40,6 +44,7 @@ kotlin {
                 implementation(libs.jna)
             }
         }
+        @Suppress("unused")
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
@@ -56,7 +61,79 @@ kotlin {
     }
 
     // Native target configuration temporarily disabled
-    // targets.withType<KotlinNativeTarget>().configureEach { ... }
+    // targets.withType<KotlinNativeTarget>().configureEach { ...     }
+}
+
+// Task to copy native libraries into JAR resources for cross-platform support
+// JNA will automatically load the correct library from META-INF/native/<os>/<arch>/
+val copyNativeLibraries = tasks.register<Copy>("copyNativeLibraries") {
+    val repoRoot = projectDir.parentFile
+    val resourcesDir = sourceSets.getByName("jvmMain").resources.srcDirs.first()
+    val nativeResourcesDir = File(resourcesDir, "META-INF/native")
+    
+    // Define required native libraries with their source paths and target JNA paths
+    // JNA uses specific OS-ARCH format: win32-x86-64, linux-x86-64, darwin-x86-64, darwin-aarch64
+    val requiredLibraries = listOf(
+        Triple("windows-amd64", "libgitleaks.dll", "win32-x86-64"),
+        Triple("linux-amd64", "libgitleaks.so", "linux-x86-64"),
+        Triple("darwin-amd64", "libgitleaks.dylib", "darwin-x86-64"),
+        Triple("darwin-arm64", "libgitleaks.dylib", "darwin-aarch64")
+    )
+    
+    val skipCheck = project.findProperty("skipNativeLibraryCheck")?.toString() == "true"
+    
+    // Copy available libraries to the correct JNA structure
+    into(nativeResourcesDir)
+    
+    requiredLibraries.forEach { (platformDir, libName, jnaPath) ->
+        val sourceFile = File(repoRoot, "build/out/$platformDir/$libName")
+        if (sourceFile.exists()) {
+            from(sourceFile) {
+                into(jnaPath)
+            }
+        }
+    }
+    
+    // Ensure output directory exists and check for missing libraries
+    doFirst {
+        nativeResourcesDir.mkdirs()
+        
+        // Check for missing libraries if check is enabled
+        if (!skipCheck) {
+            val missingLibraries = mutableListOf<String>()
+            requiredLibraries.forEach { (platformDir, libName, _) ->
+                val sourceFile = File(repoRoot, "build/out/$platformDir/$libName")
+                if (!sourceFile.exists()) {
+                    missingLibraries.add("  - $platformDir/$libName")
+                }
+            }
+            
+            if (missingLibraries.isNotEmpty()) {
+                logger.warn(
+                    "WARNING: Some native libraries are missing:\n" +
+                    missingLibraries.joinToString("\n") + "\n" +
+                    "The JAR will be built with only available libraries.\n" +
+                    "To build all libraries, run: bash build-scripts/build-all.sh\n" +
+                    "To skip this check, use: -PskipNativeLibraryCheck=true"
+                )
+            }
+        }
+        
+        // Log copied libraries
+        requiredLibraries.forEach { (platformDir, libName, jnaPath) ->
+            val sourceFile = File(repoRoot, "build/out/$platformDir/$libName")
+            if (sourceFile.exists()) {
+                logger.info("Copying native library: $platformDir/$libName -> META-INF/native/$jnaPath/$libName")
+            } else if (!skipCheck) {
+                logger.debug("Skipping missing library: $platformDir/$libName")
+            }
+        }
+    }
+}
+
+// Make jvmJar depend on copyNativeLibraries to ensure native libraries are included
+tasks.named<org.gradle.jvm.tasks.Jar>("jvmJar") {
+    dependsOn(copyNativeLibraries)
 }
 
 // Configure JVM tests to have access to native library
