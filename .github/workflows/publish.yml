@@ -43,6 +43,11 @@ jobs:
           java-version: "21"
           cache: gradle
 
+      - name: Make gradlew executable
+        working-directory: kotlin
+        run: |
+          chmod +x gradlew
+
       - name: Run Kotlin JVM tests
         working-directory: kotlin
         run: |
@@ -139,6 +144,11 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#v}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Make gradlew executable
+        working-directory: kotlin
+        run: |
+          chmod +x gradlew
 
       - name: Publish and release to Maven Central (Central Portal)
         working-directory: kotlin

@@ -46,6 +46,11 @@ jobs:
           java-version: "21"
           cache: gradle
 
+      - name: Make gradlew executable
+        working-directory: kotlin
+        run: |
+          chmod +x gradlew
+
       - name: Run Kotlin JVM tests
         working-directory: kotlin
         run: |

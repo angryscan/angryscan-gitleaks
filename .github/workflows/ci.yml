@@ -42,6 +42,11 @@ jobs:
           java-version: "21"
           cache: gradle
 
+      - name: Make gradlew executable
+        working-directory: kotlin
+        run: |
+          chmod +x gradlew
+
       - name: Run Kotlin JVM tests
         working-directory: kotlin
         run: |
@@ -146,6 +151,11 @@ jobs:
           SNAPSHOT_VERSION="${BASE_VERSION}-SNAPSHOT"
           echo "base_version=$BASE_VERSION" >> "$GITHUB_OUTPUT"
           echo "snapshot_version=$SNAPSHOT_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Make gradlew executable
+        working-directory: kotlin
+        run: |
+          chmod +x gradlew
 
       - name: Publish SNAPSHOT to Maven Central (Central Portal)
         id: publish
