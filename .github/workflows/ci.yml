@@ -185,7 +185,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          ./gradlew --no-daemon -Pversion="${{ steps.ver.outputs.snapshot_version }}" publishToMavenCentral 2>&1 | tee ../publish.log
+          ./gradlew --no-daemon -Pversion="${{ steps.ver.outputs.snapshot_version }}" publish 2>&1 | tee ../publish.log
 
       - name: Extract published timestamp version
         id: published
