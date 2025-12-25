@@ -1,0 +1,4 @@
+CI trigger file.
+Purpose: create a harmless commit to exercise GitHub Actions workflows (test -> pr snapshot).
+Updated: 2025-12-25
+
