@@ -82,9 +82,10 @@ if [ $ERRORS -eq 0 ]; then
     echo "To build for your platform:"
     OS_NAME=$(uname -s 2>/dev/null || echo "Unknown")
     if [[ "$OS_NAME" == *"MINGW"* ]] || [[ "$OS_NAME" == *"MSYS"* ]] || [[ -n "${WINDIR:-}" ]]; then
-        echo "  bash build-scripts/build-windows.sh"
+        echo "  bash build-scripts/build-windows.sh amd64"
     elif [[ "$OS_NAME" == "Linux" ]]; then
-        echo "  bash build-scripts/build-linux.sh"
+        echo "  bash build-scripts/build-linux.sh amd64"
+        echo "  bash build-scripts/build-linux.sh arm64   # requires gcc-aarch64-linux-gnu for cross-compilation"
     elif [[ "$OS_NAME" == "Darwin" ]]; then
         echo "  bash build-scripts/build-darwin.sh amd64   # Intel"
         echo "  bash build-scripts/build-darwin.sh arm64   # Apple Silicon"
@@ -94,5 +95,6 @@ else
     echo "✗ Missing $ERRORS dependency/dependencies. Please install them before building."
     exit 1
 fi
+
 
 

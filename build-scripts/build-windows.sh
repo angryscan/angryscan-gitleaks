@@ -2,11 +2,21 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OUT_DIR="${ROOT_DIR}/build/out/windows-amd64"
+ARCH="${1:-amd64}" # amd64 or arm64
+
+case "${ARCH}" in
+  amd64|arm64) ;;
+  *)
+    echo "Error: unsupported architecture '${ARCH}'. Supported: amd64, arm64" >&2
+    exit 2
+    ;;
+esac
+
+OUT_DIR="${ROOT_DIR}/build/out/windows-${ARCH}"
 
 mkdir -p "${OUT_DIR}"
 
-echo "Building Windows (amd64) shared library..."
+echo "Building Windows (${ARCH}) shared library..."
 
 # Try to find the correct MinGW compiler
 # Go automatically adds -mthreads flag for Windows, but not all gcc versions support it
@@ -17,7 +27,10 @@ CGO_CFLAGS_OVERRIDE=""
 
 if [ -z "$CC" ]; then
     # Try to find MinGW-w64 compiler (supports -mthreads)
-    if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
+    if [ "${ARCH}" = "arm64" ] && command -v aarch64-w64-mingw32-gcc &> /dev/null; then
+        CC=aarch64-w64-mingw32-gcc
+        echo "Using MinGW-w64 compiler: $CC"
+    elif [ "${ARCH}" = "amd64" ] && command -v x86_64-w64-mingw32-gcc &> /dev/null; then
         CC=x86_64-w64-mingw32-gcc
         echo "Using MinGW-w64 compiler: $CC"
     elif command -v gcc &> /dev/null; then
@@ -39,10 +52,10 @@ fi
 # Build with explicit CC and CGO settings
 # If CGO_CFLAGS_OVERRIDE is set, use it to override Go's automatic -mthreads flag
 if [ -n "$CGO_CFLAGS_OVERRIDE" ]; then
-    CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC="$CC" CGO_CFLAGS="$CGO_CFLAGS_OVERRIDE" \
+    CGO_ENABLED=1 GOOS=windows GOARCH="${ARCH}" CC="$CC" CGO_CFLAGS="$CGO_CFLAGS_OVERRIDE" \
       go build -buildmode=c-shared -o "${OUT_DIR}/libgitleaks.dll" "${ROOT_DIR}/cgo"
 else
-    CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC="$CC" \
+    CGO_ENABLED=1 GOOS=windows GOARCH="${ARCH}" CC="$CC" \
       go build -buildmode=c-shared -o "${OUT_DIR}/libgitleaks.dll" "${ROOT_DIR}/cgo"
 fi
 

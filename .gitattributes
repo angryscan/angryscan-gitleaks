@@ -1,0 +1,12 @@
+* text=auto
+
+# Ensure scripts/workflows are always LF so they work in Linux/macOS/WSL shells
+*.sh text eol=lf
+gradlew text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Common text formats
+*.md text eol=lf
+*.properties text eol=lf
+*.kts text eol=lf
