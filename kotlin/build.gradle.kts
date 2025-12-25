@@ -64,12 +64,14 @@ kotlin {
     // targets.withType<KotlinNativeTarget>().configureEach { ...     }
 }
 
-// Task to copy native libraries into JAR resources for cross-platform support
-// JNA will automatically load the correct library from META-INF/native/<os>/<arch>/
+// Task to copy native libraries into JAR resources for cross-platform support.
+// JNA can extract bundled libraries from the classpath when they are located at:
+//   <os-arch>/<library-file>
+// Example: win32-x86-64/libgitleaks.dll
 val copyNativeLibraries = tasks.register<Copy>("copyNativeLibraries") {
     val repoRoot = projectDir.parentFile
     val resourcesDir = sourceSets.getByName("jvmMain").resources.srcDirs.first()
-    val nativeResourcesDir = File(resourcesDir, "META-INF/native")
+    val nativeResourcesDir = File(resourcesDir, "")
     
     // Define required native libraries with their source paths and target JNA paths
     // JNA uses specific OS-ARCH format: win32-x86-64, linux-x86-64, darwin-x86-64, darwin-aarch64
@@ -82,7 +84,7 @@ val copyNativeLibraries = tasks.register<Copy>("copyNativeLibraries") {
     
     val skipCheck = project.findProperty("skipNativeLibraryCheck")?.toString() == "true"
     
-    // Copy available libraries to the correct JNA structure
+    // Copy available libraries to the correct JNA resource structure (<os-arch>/<lib>)
     into(nativeResourcesDir)
     
     requiredLibraries.forEach { (platformDir, libName, jnaPath) ->
@@ -97,6 +99,22 @@ val copyNativeLibraries = tasks.register<Copy>("copyNativeLibraries") {
     // Ensure output directory exists and check for missing libraries
     doFirst {
         nativeResourcesDir.mkdirs()
+
+        // Clean up previously generated locations to avoid duplicating native libs in the JAR.
+        // We only keep "<os-arch>/<lib>" (e.g. win32-x86-64/libgitleaks.dll).
+        val generatedDirs = listOf(
+            "win32-x86-64",
+            "linux-x86-64",
+            "darwin-x86-64",
+            "darwin-aarch64",
+            "META-INF/native"
+        )
+        generatedDirs.forEach { rel ->
+            val dir = File(resourcesDir, rel)
+            if (dir.exists()) {
+                dir.deleteRecursively()
+            }
+        }
         
         // Check for missing libraries if check is enabled
         if (!skipCheck) {
@@ -123,7 +141,7 @@ val copyNativeLibraries = tasks.register<Copy>("copyNativeLibraries") {
         requiredLibraries.forEach { (platformDir, libName, jnaPath) ->
             val sourceFile = File(repoRoot, "build/out/$platformDir/$libName")
             if (sourceFile.exists()) {
-                logger.info("Copying native library: $platformDir/$libName -> META-INF/native/$jnaPath/$libName")
+                logger.info("Copying native library: $platformDir/$libName -> $jnaPath/$libName")
             } else if (!skipCheck) {
                 logger.debug("Skipping missing library: $platformDir/$libName")
             }

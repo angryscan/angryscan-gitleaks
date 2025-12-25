@@ -143,6 +143,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     needs: build_native
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -177,13 +178,36 @@ jobs:
           chmod +x gradlew
 
       - name: Publish and release to Maven Central (Central Portal)
+        id: publish
         working-directory: kotlin
         env:
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.CENTRAL_PORTAL_USERNAME || secrets.OSSRH_USERNAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.CENTRAL_PORTAL_TOKEN || secrets.OSSRH_PASSWORD }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.OSSRH_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.OSSRH_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+        shell: bash
         run: |
-          ./gradlew --no-daemon -Pversion="${{ steps.ver.outputs.version }}" publishAndReleaseToMavenCentral
+          set -o pipefail
+          if [ -z "${ORG_GRADLE_PROJECT_mavenCentralUsername:-}" ] || [ -z "${ORG_GRADLE_PROJECT_mavenCentralPassword:-}" ]; then
+            echo "Missing Maven Central credentials. Configure repository secrets:"
+            echo "  - OSSRH_USERNAME (or Central Portal token username)"
+            echo "  - OSSRH_PASSWORD (or Central Portal token password)"
+            exit 1
+          fi
+          if [ -z "${ORG_GRADLE_PROJECT_signingInMemoryKey:-}" ] || [ -z "${ORG_GRADLE_PROJECT_signingInMemoryKeyPassword:-}" ]; then
+            echo "Missing signing key material. Configure repository secrets:"
+            echo "  - SIGNING_KEY"
+            echo "  - SIGNING_PASSWORD"
+            exit 1
+          fi
+          ./gradlew --no-daemon --stacktrace -Pversion="${{ steps.ver.outputs.version }}" publishAndReleaseToMavenCentral 2>&1 | tee ../publish.log
+
+      - name: Upload publish log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish-log
+          path: publish.log
+          if-no-files-found: warn
 
 
