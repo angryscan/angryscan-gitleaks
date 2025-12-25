@@ -216,13 +216,14 @@ mavenPublishing {
     signAllPublications()
 
     // For release versions, use Central Portal
-    // SNAPSHOT versions will be published via standard publishing block below
     if (!project.version.toString().endsWith("SNAPSHOT")) {
         publishToMavenCentral()
     }
+    // For SNAPSHOT versions, repository is configured in standard publishing block below
 }
 
-// For SNAPSHOT versions, publish directly to OSSRH (Central Portal doesn't support snapshots)
+// For SNAPSHOT versions, configure OSSRH repository (Central Portal doesn't support snapshots)
+// The mavenPublishing plugin creates publications, and this block configures where to publish them
 if (project.version.toString().endsWith("SNAPSHOT")) {
     publishing {
         repositories {
