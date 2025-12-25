@@ -46,7 +46,7 @@ jobs:
                 core.info(`Found test workflow run: id=${run.id} status=${run.status} conclusion=${run.conclusion}`);
                 if (run.status === "completed") {
                   if (run.conclusion === "success") {
-                    core.info("test.yml succeeded; continuing pr workflow.");
+                    core.info("test.yml succeeded; continuing snapshot workflow.");
                     return;
                   }
                   core.setFailed(`test.yml completed but did not succeed (conclusion=${run.conclusion}).`);
