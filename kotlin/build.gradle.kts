@@ -82,10 +82,9 @@ val copyNativeLibraries = tasks.register<Copy>("copyNativeLibraries") {
     )
 
     // Define required native libraries with their source paths and target JNA paths.
-    // JNA uses OS-ARCH directory names like: win32-x86-64, win32-aarch64, linux-x86-64, linux-aarch64, darwin-x86-64, darwin-aarch64.
+    // JNA uses OS-ARCH directory names like: win32-x86-64, linux-x86-64, linux-aarch64, darwin-x86-64, darwin-aarch64.
     val requiredLibraries = listOf(
         NativeLibrary("windows-amd64", "libgitleaks.dll", listOf("win32-x86-64")),
-        NativeLibrary("windows-arm64", "libgitleaks.dll", listOf("win32-aarch64")),
         NativeLibrary("linux-amd64", "libgitleaks.so", listOf("linux-x86-64")),
         NativeLibrary("linux-arm64", "libgitleaks.so", listOf("linux-aarch64")),
         NativeLibrary("darwin-amd64", "libgitleaks.dylib", listOf("darwin-x86-64")),
@@ -115,7 +114,6 @@ val copyNativeLibraries = tasks.register<Copy>("copyNativeLibraries") {
         // We only keep "<os-arch>/<lib>" (e.g. win32-x86-64/libgitleaks.dll).
         val generatedDirs = listOf(
             "win32-x86-64",
-            "win32-aarch64",
             "linux-x86-64",
             "linux-aarch64",
             "darwin-x86-64",
@@ -182,11 +180,7 @@ tasks.named<Test>("jvmTest") {
     val osArch = System.getProperty("os.arch", "").lowercase()
     val libDir = when {
         osName.startsWith("windows") -> {
-            if (osArch == "aarch64" || osArch == "arm64") {
-                repoRoot.resolve("build/out/windows-arm64")
-            } else {
-                repoRoot.resolve("build/out/windows-amd64")
-            }
+            repoRoot.resolve("build/out/windows-amd64")
         }
         osName.startsWith("linux") -> {
             if (osArch == "aarch64" || osArch == "arm64") {
