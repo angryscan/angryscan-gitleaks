@@ -8,8 +8,8 @@ plugins {
     alias(libs.plugins.maven.publish)
 }
 
-group = (project.findProperty("group") as String?) ?: "org.angryscan"
-version = (project.findProperty("version") as String?) ?: "0.1.0"
+group = project.properties["group"] as String
+version = project.properties["version"] as String
 
 repositories {
     mavenCentral()
@@ -181,61 +181,53 @@ tasks.named<Test>("jvmTest") {
     }
 }
 
+// Publishing to Maven Central (Sonatype OSSRH).
+// Snapshot publishing is enabled automatically when the version ends with "-SNAPSHOT".
+// Credentials and signing keys are expected to be provided via Gradle properties, e.g. in CI:
+// - ORG_GRADLE_PROJECT_mavenCentralUsername / ORG_GRADLE_PROJECT_mavenCentralPassword
+// - ORG_GRADLE_PROJECT_signingInMemoryKey / ORG_GRADLE_PROJECT_signingInMemoryKeyPassword
 mavenPublishing {
+    // Keep coordinates explicit to avoid changing artifactId when the Gradle project name changes.
     coordinates(
-        groupId = "org.angryscan",
+        groupId = group.toString(),
         artifactId = "gitleaks",
-        version = project.version.toString()
+        version = version.toString()
     )
 
+    // Publish to Maven Central (Sonatype). The plugin routes to the correct endpoint:
+    // - release versions -> staging repository
+    // - "-SNAPSHOT" versions -> snapshots repository
+    publishToMavenCentral()
+
+    // Sign all publications (required by Maven Central).
+    signAllPublications()
+
+    // POM metadata (recommended by com.vanniktech.maven.publish).
     pom {
-        name.set("AngryScan Gitleaks Kotlin Matcher")
-        description.set("Kotlin Multiplatform wrapper for Gitleaks secret detection engine")
+        name.set("angryscan-gitleaks-kmp")
+        description.set("Kotlin Multiplatform bindings over the Go libgitleaks shared library.")
+        inceptionYear.set("2025")
         url.set("https://github.com/angryscan/angryscan-gitleaks")
 
         licenses {
             license {
-                name.set("Apache-2.0")
-                url.set("https://www.apache.org/licenses/LICENSE-2.0")
-            }
-        }
-
-        developers {
-            developer {
-                id.set("stellalupus")
-                name.set("StellaLupus")
-                email.set("soulofpain.k@gmail.com")
+                name.set("MIT License")
+                url.set("https://opensource.org/licenses/MIT")
             }
         }
 
         scm {
             url.set("https://github.com/angryscan/angryscan-gitleaks")
+            connection.set("scm:git:git://github.com/angryscan/angryscan-gitleaks.git")
+            developerConnection.set("scm:git:ssh://git@github.com/angryscan/angryscan-gitleaks.git")
         }
-    }
 
-    signAllPublications()
-
-    // For release versions, use Central Portal
-    if (!project.version.toString().endsWith("SNAPSHOT")) {
-        publishToMavenCentral()
-    }
-    // For SNAPSHOT versions, repository is configured in standard publishing block below
-}
-
-// For SNAPSHOT versions, configure OSSRH repository (Central Portal doesn't support snapshots)
-// The mavenPublishing plugin creates publications, and this block configures where to publish them
-if (project.version.toString().endsWith("SNAPSHOT")) {
-    publishing {
-        repositories {
-            maven {
-                name = "sonatype-ossrh-snapshots"
-                url = uri("https://oss.sonatype.org/content/repositories/snapshots/")
-                credentials {
-                    username = project.findProperty("ORG_GRADLE_PROJECT_mavenCentralUsername") as String?
-                    password = project.findProperty("ORG_GRADLE_PROJECT_mavenCentralPassword") as String?
-                }
+        developers {
+            developer {
+                id.set("angryscan")
+                name.set("angryscan")
+                url.set("https://github.com/angryscan")
             }
         }
     }
 }
-

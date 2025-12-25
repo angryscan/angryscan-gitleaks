@@ -185,7 +185,27 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          ./gradlew --no-daemon -Pversion="${{ steps.ver.outputs.snapshot_version }}" publish 2>&1 | tee ../publish.log
+          if [ -z "${ORG_GRADLE_PROJECT_mavenCentralUsername:-}" ] || [ -z "${ORG_GRADLE_PROJECT_mavenCentralPassword:-}" ]; then
+            echo "Missing Maven Central credentials. Configure repository secrets:"
+            echo "  - OSSRH_USERNAME (or Central Portal token username)"
+            echo "  - OSSRH_PASSWORD (or Central Portal token password)"
+            exit 1
+          fi
+          if [ -z "${ORG_GRADLE_PROJECT_signingInMemoryKey:-}" ] || [ -z "${ORG_GRADLE_PROJECT_signingInMemoryKeyPassword:-}" ]; then
+            echo "Missing signing key material. Configure repository secrets:"
+            echo "  - SIGNING_KEY"
+            echo "  - SIGNING_PASSWORD"
+            exit 1
+          fi
+          ./gradlew --no-daemon --stacktrace -Pversion="${{ steps.ver.outputs.snapshot_version }}" publish 2>&1 | tee ../publish.log
+
+      - name: Upload publish log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish-log
+          path: publish.log
+          if-no-files-found: warn
 
       - name: Extract published timestamp version
         id: published
