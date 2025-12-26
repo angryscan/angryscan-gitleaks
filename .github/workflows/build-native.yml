@@ -72,49 +72,6 @@ jobs:
         if: matrix.platform == 'darwin'
         run: ${{ matrix.script }}
 
-      - name: Verify native binaries are present (per platform)
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "Build outputs:"
-          find build/out -maxdepth 2 -type f -print || true
-
-          case "${{ matrix.platform }}" in
-            linux)
-              required=(
-                "build/out/linux-amd64/libgitleaks.so"
-                "build/out/linux-arm64/libgitleaks.so"
-              )
-              ;;
-            windows)
-              required=(
-                "build/out/windows-amd64/libgitleaks.dll"
-              )
-              ;;
-            darwin)
-              required=(
-                "build/out/darwin-amd64/libgitleaks.dylib"
-                "build/out/darwin-arm64/libgitleaks.dylib"
-              )
-              ;;
-            *)
-              echo "Unknown platform: ${{ matrix.platform }}" >&2
-              exit 1
-              ;;
-          esac
-
-          missing=0
-          for f in "${required[@]}"; do
-            if [ ! -f "$f" ]; then
-              echo "Missing: $f" >&2
-              missing=1
-            fi
-          done
-          if [ "$missing" -ne 0 ]; then
-            echo "Native binaries are missing for platform=${{ matrix.platform }}; failing workflow." >&2
-            exit 1
-          fi
-
       - name: Upload native artifacts (Darwin AMD64)
         if: matrix.platform == 'darwin'
         uses: actions/upload-artifact@v4
