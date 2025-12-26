@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -64,41 +65,6 @@ jobs:
         with:
           name: native-windows-amd64
           path: build/out/windows-amd64
-
-      - name: "Debug: show downloaded native layout"
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "=== Current working directory ==="
-          pwd
-          echo ""
-          echo "=== Workspace root contents ==="
-          ls -la . | head -20 || true
-          echo ""
-          echo "=== Checking for build directory ==="
-          if [ -d "build" ]; then
-            echo "build/ directory exists"
-            ls -la build/ || true
-          else
-            echo "build/ directory does NOT exist"
-          fi
-          echo ""
-          echo "=== Checking for build/out directory ==="
-          if [ -d "build/out" ]; then
-            echo "build/out/ directory exists"
-            echo "=== build/out/ contents ==="
-            ls -la build/out/ || true
-            echo ""
-            echo "=== build/out/ tree structure ==="
-            find build/out -type f -print || true
-            echo ""
-            echo "=== build/out/ directory structure ==="
-            find build/out -type d -print || true
-          else
-            echo "build/out/ directory does NOT exist"
-            echo "=== Searching for any downloaded files ==="
-            find . -name "*.so" -o -name "*.dll" -o -name "*.dylib" 2>/dev/null | head -20 || true
-          fi
 
       - name: Set up Java
         uses: actions/setup-java@v4
