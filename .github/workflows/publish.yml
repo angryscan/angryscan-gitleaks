@@ -78,9 +78,9 @@ jobs:
           fetch-depth: 0
 
       - name: Download native artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
-          # Artifacts are uploaded with directory structure preserved (build/out/...).
+          # Artifacts are uploaded as directories (build/out/...).
           # Download into workspace root to restore build/out/... structure.
           path: .
           pattern: native-*
