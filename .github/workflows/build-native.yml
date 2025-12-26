@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 jobs:
   build_native:
@@ -74,41 +75,46 @@ jobs:
 
       - name: Upload native artifacts (Darwin AMD64)
         if: matrix.platform == 'darwin'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: native-darwin-amd64
+          # Upload directory - download will restore build/out/darwin-amd64/... structure
           path: build/out/darwin-amd64
           if-no-files-found: error
       
       - name: Upload native artifacts (Darwin ARM64)
         if: matrix.platform == 'darwin'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: native-darwin-arm64
+          # Upload directory - download will restore build/out/darwin-arm64/... structure
           path: build/out/darwin-arm64
           if-no-files-found: error
 
       - name: Upload native artifacts (Linux AMD64)
         if: matrix.platform == 'linux'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: native-linux-amd64
+          # Upload directory - download will restore build/out/linux-amd64/... structure
           path: build/out/linux-amd64
           if-no-files-found: error
 
       - name: Upload native artifacts (Linux ARM64)
         if: matrix.platform == 'linux'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: native-linux-arm64
+          # Upload directory - download will restore build/out/linux-arm64/... structure
           path: build/out/linux-arm64
           if-no-files-found: error
 
       - name: Upload native artifacts (Windows AMD64)
         if: matrix.platform == 'windows'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: native-windows-amd64
+          # Upload directory - download will restore build/out/windows-amd64/... structure
           path: build/out/windows-amd64
           if-no-files-found: error
 

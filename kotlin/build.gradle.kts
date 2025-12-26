@@ -1,6 +1,7 @@
 import org.gradle.api.tasks.Copy
 import org.gradle.language.jvm.tasks.ProcessResources
 import java.io.File
+import java.util.zip.ZipFile
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -66,37 +67,37 @@ kotlin {
     // targets.withType<KotlinNativeTarget>().configureEach { ...     }
 }
 
-// Task to copy native libraries into JAR resources for cross-platform support.
-// JNA can extract bundled libraries from the classpath when they are located at:
+// Native libraries that must be present in build/out and bundled into the JVM JAR resources.
+// JNA extracts bundled libraries from the classpath when they are located at:
 //   <os-arch>/<library-file>
 // Example: win32-x86-64/libgitleaks.dll
+data class NativeLibrary(
+    val platformDir: String,
+    val libName: String,
+    val jnaPaths: List<String>
+)
+
+// JNA uses OS-ARCH directory names like: win32-x86-64, linux-x86-64, linux-aarch64, darwin-x86-64, darwin-aarch64.
+val requiredNativeLibraries = listOf(
+    NativeLibrary("windows-amd64", "libgitleaks.dll", listOf("win32-x86-64")),
+    NativeLibrary("linux-amd64", "libgitleaks.so", listOf("linux-x86-64")),
+    NativeLibrary("linux-arm64", "libgitleaks.so", listOf("linux-aarch64")),
+    NativeLibrary("darwin-amd64", "libgitleaks.dylib", listOf("darwin-x86-64")),
+    NativeLibrary("darwin-arm64", "libgitleaks.dylib", listOf("darwin-aarch64"))
+)
+
+// Task to copy native libraries into JAR resources for cross-platform support.
 val copyNativeLibraries = tasks.register<Copy>("copyNativeLibraries") {
     val repoRoot = projectDir.parentFile
     val resourcesDir = sourceSets.getByName("jvmMain").resources.srcDirs.first()
     val nativeResourcesDir = File(resourcesDir, "")
-    
-    data class NativeLibrary(
-        val platformDir: String,
-        val libName: String,
-        val jnaPaths: List<String>
-    )
 
-    // Define required native libraries with their source paths and target JNA paths.
-    // JNA uses OS-ARCH directory names like: win32-x86-64, linux-x86-64, linux-aarch64, darwin-x86-64, darwin-aarch64.
-    val requiredLibraries = listOf(
-        NativeLibrary("windows-amd64", "libgitleaks.dll", listOf("win32-x86-64")),
-        NativeLibrary("linux-amd64", "libgitleaks.so", listOf("linux-x86-64")),
-        NativeLibrary("linux-arm64", "libgitleaks.so", listOf("linux-aarch64")),
-        NativeLibrary("darwin-amd64", "libgitleaks.dylib", listOf("darwin-x86-64")),
-        NativeLibrary("darwin-arm64", "libgitleaks.dylib", listOf("darwin-aarch64"))
-    )
-    
     val skipCheck = project.findProperty("skipNativeLibraryCheck")?.toString() == "true"
     
     // Copy available libraries to the correct JNA resource structure (<os-arch>/<lib>)
     into(nativeResourcesDir)
     
-    requiredLibraries.forEach { lib ->
+    requiredNativeLibraries.forEach { lib ->
         val sourceFile = File(repoRoot, "build/out/${lib.platformDir}/${lib.libName}")
         if (!sourceFile.exists()) return@forEach
         lib.jnaPaths.forEach { jnaPath ->
@@ -130,7 +131,7 @@ val copyNativeLibraries = tasks.register<Copy>("copyNativeLibraries") {
         // Check for missing libraries if check is enabled
         if (!skipCheck) {
             val missingLibraries = mutableListOf<String>()
-            requiredLibraries.forEach { lib ->
+            requiredNativeLibraries.forEach { lib ->
                 val sourceFile = File(repoRoot, "build/out/${lib.platformDir}/${lib.libName}")
                 if (!sourceFile.exists()) {
                     missingLibraries.add("  - ${lib.platformDir}/${lib.libName}")
@@ -138,18 +139,20 @@ val copyNativeLibraries = tasks.register<Copy>("copyNativeLibraries") {
             }
             
             if (missingLibraries.isNotEmpty()) {
-                logger.warn(
-                    "WARNING: Some native libraries are missing:\n" +
-                    missingLibraries.joinToString("\n") + "\n" +
-                    "The JAR will be built with only available libraries.\n" +
-                    "To build all libraries, run: bash build-scripts/build-all.sh\n" +
-                    "To skip this check, use: -PskipNativeLibraryCheck=true"
+                throw GradleException(
+                    "Missing required native libraries. Refusing to build/publish an incomplete JVM artifact.\n" +
+                        missingLibraries.joinToString("\n") + "\n\n" +
+                        "Build all libraries first:\n" +
+                        "  bash build-scripts/build-all.sh\n\n" +
+                        "CI note: publish workflows must run build-native and download artifacts into build/out.\n\n" +
+                        "If you really want to bypass this check (NOT recommended for releases), use:\n" +
+                        "  -PskipNativeLibraryCheck=true"
                 )
             }
         }
         
         // Log copied libraries
-        requiredLibraries.forEach { lib ->
+        requiredNativeLibraries.forEach { lib ->
             val sourceFile = File(repoRoot, "build/out/${lib.platformDir}/${lib.libName}")
             if (sourceFile.exists()) {
                 val paths = lib.jnaPaths.joinToString(", ")
@@ -170,6 +173,48 @@ tasks.named<org.gradle.jvm.tasks.Jar>("jvmJar") {
 // Declare the dependency explicitly to avoid ordering issues.
 tasks.named<ProcessResources>("jvmProcessResources") {
     dependsOn(copyNativeLibraries)
+}
+
+// Verify that the built JVM JAR actually contains all required native resources
+// at the exact paths JNA expects (e.g. linux-x86-64/libgitleaks.so).
+val verifyBundledNativeLibraries = tasks.register("verifyBundledNativeLibraries") {
+    dependsOn(tasks.named<org.gradle.jvm.tasks.Jar>("jvmJar"))
+
+    doLast {
+        val skipCheck = project.findProperty("skipNativeLibraryCheck")?.toString() == "true"
+        if (skipCheck) {
+            logger.warn("Skipping verifyBundledNativeLibraries because -PskipNativeLibraryCheck=true was provided.")
+            return@doLast
+        }
+
+        val jarTask = tasks.named<org.gradle.jvm.tasks.Jar>("jvmJar").get()
+        val jarFile = jarTask.archiveFile.get().asFile
+        if (!jarFile.exists()) {
+            throw GradleException("Expected JVM jar does not exist: ${jarFile.absolutePath}")
+        }
+
+        val expectedEntries = requiredNativeLibraries.flatMap { lib ->
+            lib.jnaPaths.map { jnaPath -> "$jnaPath/${lib.libName}" }
+        }.toSet()
+
+        ZipFile(jarFile).use { zip ->
+            val present = zip.entries().asSequence().map { it.name }.toSet()
+            val missing = expectedEntries.filterNot { it in present }
+            if (missing.isNotEmpty()) {
+                throw GradleException(
+                    "JVM jar is missing required bundled native libraries (JNA resource paths).\n" +
+                        "Jar: ${jarFile.name}\n" +
+                        missing.joinToString(separator = "\n") { "  - $it" } + "\n\n" +
+                        "This would crash at runtime with UnsatisfiedLinkError on the missing platforms."
+                )
+            }
+        }
+    }
+}
+
+// Make publishing tasks fail fast if native binaries are not bundled correctly.
+tasks.matching { it.name == "publish" || it.name == "publishAndReleaseToMavenCentral" }.configureEach {
+    dependsOn(verifyBundledNativeLibraries)
 }
 
 // Configure JVM tests to have access to native library

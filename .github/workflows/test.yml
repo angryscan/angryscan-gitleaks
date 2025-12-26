@@ -6,35 +6,65 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  build_native:
+    uses: ./.github/workflows/build-native.yml
+    with:
+      # For PRs test the exact head SHA; for pushes use github.sha
+      ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
   test:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    name: jvmTest (${{ matrix.os }})
+    needs: build_native
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-14]
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Download native artifacts (Darwin AMD64)
+        uses: actions/download-artifact@v7
         with:
-          go-version-file: go.mod
-          cache: true
+          name: native-darwin-amd64
+          path: build/out/darwin-amd64
 
-      - name: Install build tools (for CGO)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential git
+      - name: Download native artifacts (Darwin ARM64)
+        uses: actions/download-artifact@v7
+        with:
+          name: native-darwin-arm64
+          path: build/out/darwin-arm64
 
-      - name: Build native library (linux-amd64) for Kotlin JVM tests
-        run: |
-          bash build-scripts/build-linux.sh
+      - name: Download native artifacts (Linux AMD64)
+        uses: actions/download-artifact@v7
+        with:
+          name: native-linux-amd64
+          path: build/out/linux-amd64
+
+      - name: Download native artifacts (Linux ARM64)
+        uses: actions/download-artifact@v7
+        with:
+          name: native-linux-arm64
+          path: build/out/linux-arm64
+
+      - name: Download native artifacts (Windows AMD64)
+        uses: actions/download-artifact@v7
+        with:
+          name: native-windows-amd64
+          path: build/out/windows-amd64
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -44,12 +74,23 @@ jobs:
           cache: gradle
 
       - name: Make gradlew executable
+        if: runner.os != 'Windows'
         working-directory: kotlin
+        shell: bash
         run: |
           chmod +x gradlew
 
-      - name: Run Kotlin JVM tests
+      - name: Run Kotlin JVM tests (Unix)
+        if: runner.os != 'Windows'
         working-directory: kotlin
+        shell: bash
         run: |
           ./gradlew --no-daemon jvmTest
+
+      - name: Run Kotlin JVM tests (Windows)
+        if: runner.os == 'Windows'
+        working-directory: kotlin
+        shell: pwsh
+        run: |
+          .\\gradlew.bat --no-daemon jvmTest
 

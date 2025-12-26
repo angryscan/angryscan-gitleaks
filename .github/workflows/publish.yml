@@ -77,12 +77,35 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download native artifacts
-        uses: actions/download-artifact@v4
+      - name: Download native artifacts (Darwin AMD64)
+        uses: actions/download-artifact@v7
         with:
-          path: build/out
-          pattern: native-*
-          merge-multiple: true
+          name: native-darwin-amd64
+          path: build/out/darwin-amd64
+
+      - name: Download native artifacts (Darwin ARM64)
+        uses: actions/download-artifact@v7
+        with:
+          name: native-darwin-arm64
+          path: build/out/darwin-arm64
+
+      - name: Download native artifacts (Linux AMD64)
+        uses: actions/download-artifact@v7
+        with:
+          name: native-linux-amd64
+          path: build/out/linux-amd64
+
+      - name: Download native artifacts (Linux ARM64)
+        uses: actions/download-artifact@v7
+        with:
+          name: native-linux-arm64
+          path: build/out/linux-arm64
+
+      - name: Download native artifacts (Windows AMD64)
+        uses: actions/download-artifact@v7
+        with:
+          name: native-windows-amd64
+          path: build/out/windows-amd64
 
       - name: Set up Java
         uses: actions/setup-java@v4
