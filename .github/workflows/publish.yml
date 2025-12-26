@@ -80,7 +80,9 @@ jobs:
       - name: Download native artifacts
         uses: actions/download-artifact@v4
         with:
-          path: build/out
+          # Artifacts are uploaded with paths under "build/out/...".
+          # Download into workspace root to avoid ending up with "build/out/build/out/...".
+          path: .
           pattern: native-*
           merge-multiple: true
 
