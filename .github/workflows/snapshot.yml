@@ -83,14 +83,35 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Download native artifacts
+      - name: Download native artifacts (Darwin AMD64)
         uses: actions/download-artifact@v7
         with:
-          # Artifacts are uploaded as directories (build/out/...).
-          # Download into workspace root to restore build/out/... structure.
-          path: .
-          pattern: native-*
-          merge-multiple: true
+          name: native-darwin-amd64
+          path: build/out/darwin-amd64
+
+      - name: Download native artifacts (Darwin ARM64)
+        uses: actions/download-artifact@v7
+        with:
+          name: native-darwin-arm64
+          path: build/out/darwin-arm64
+
+      - name: Download native artifacts (Linux AMD64)
+        uses: actions/download-artifact@v7
+        with:
+          name: native-linux-amd64
+          path: build/out/linux-amd64
+
+      - name: Download native artifacts (Linux ARM64)
+        uses: actions/download-artifact@v7
+        with:
+          name: native-linux-arm64
+          path: build/out/linux-arm64
+
+      - name: Download native artifacts (Windows AMD64)
+        uses: actions/download-artifact@v7
+        with:
+          name: native-windows-amd64
+          path: build/out/windows-amd64
 
       - name: Set up Java
         uses: actions/setup-java@v4
