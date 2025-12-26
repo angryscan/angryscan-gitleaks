@@ -44,6 +44,13 @@ jobs:
           pattern: native-*
           merge-multiple: true
 
+      - name: "Debug: show downloaded native layout"
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Workspace build/out tree:"
+          find build/out -maxdepth 3 -type f -print || true
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
